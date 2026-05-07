@@ -1,6 +1,6 @@
 yfinance==0.2.37
 pandas==2.1.4
-pandas_ta
+pandas-ta
 requests
 schedule
 nsepython
