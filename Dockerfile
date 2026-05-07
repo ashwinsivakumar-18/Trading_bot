@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 WORKDIR /app
 
@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
-    pip install yfinance pandas requests schedule nsepython && \
-    pip install git+https://github.com/twopirllc/pandas-ta.git
+    pip install yfinance pandas-ta pandas requests schedule nsepython && \
 
 COPY . .
 
