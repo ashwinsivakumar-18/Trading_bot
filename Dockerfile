@@ -9,10 +9,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-
 RUN pip install --upgrade pip && \
-    pip install yfinance pandas pandas-ta requests schedule nsepython
+    pip install yfinance pandas requests schedule nsepython && \
+    pip install git+https://github.com/twopirllc/pandas-ta.git
 
 COPY . .
 
