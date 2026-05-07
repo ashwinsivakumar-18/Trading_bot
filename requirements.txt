@@ -1,6 +1,6 @@
 yfinance==0.2.37
 pandas==2.1.4
 pandas-ta==0.3.14b
-requests==2.31.0
+requests==2.33.0
 schedule==1.2.1
 nsepython==2.9
