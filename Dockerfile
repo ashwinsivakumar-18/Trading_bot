@@ -2,15 +2,22 @@ FROM python:3.11
 
 WORKDIR /app
 
-# Install git + build tools
 RUN apt-get update && apt-get install -y \
     git \
     gcc \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential
 
-RUN pip install --upgrade pip && \
-    pip install yfinance pandas-ta pandas requests schedule nsepython
+RUN pip install --upgrade pip
+
+RUN pip install \
+    yfinance \
+    pandas \
+    requests \
+    schedule \
+    nsepython \
+    numpy
+
+RUN pip install git+https://github.com/twopirllc/pandas-ta.git
 
 COPY . .
 
