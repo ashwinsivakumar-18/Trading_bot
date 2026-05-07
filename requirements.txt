@@ -3,3 +3,5 @@ pandas
 requests
 numpy
 schedule
+pandas-ta
+nsepython
