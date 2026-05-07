@@ -278,6 +278,71 @@ def check_internet_and_flush():
         send_pending_messages()
 
 
+# ─────────────────────────────────────────────
+#  HEARTBEAT — SENT EVERY 1 HOUR
+#  Confirms engine is alive and connected.
+#  Silently skipped if internet is down.
+# ─────────────────────────────────────────────
+
+_heartbeat_count = 0   # Increments each hour — shows total uptime
+
+
+def send_heartbeat():
+    """
+    Sends a concise 'engine alive' ping to Telegram every 1 hour.
+    Includes:
+      - Current IST time
+      - Market status (open / closed / holiday)
+      - Pending queued messages (if any)
+      - Uptime counter (hours since engine started)
+    Skipped silently if internet is unavailable.
+    """
+    global _heartbeat_count
+    _heartbeat_count += 1
+
+    if not is_internet_available():
+        print(f"[Heartbeat #{_heartbeat_count}] Skipped — no internet.")
+        return
+
+    now        = datetime.now(india)                          # Always IST
+    time_str   = now.strftime("%d %b %Y  %I:%M %p IST")      # e.g. 07 May 2026  11:00 AM IST
+    pending    = len(_pending_messages)
+
+    # Market status line
+    if is_market_holiday():
+        holiday_name = get_holiday_name()
+        market_line  = f"🏖️ Market closed — {holiday_name}"
+    elif is_market_open():
+        market_line  = "🟢 Market OPEN"
+    else:
+        market_line  = "🔴 Market closed (after hours)"
+
+    # Engine always runs 24x7 — clarify state when market is shut
+    if is_market_open():
+        engine_line = "✅ Engine connected &amp; scanning"
+    else:
+        engine_line = "✅ Engine connected &amp; waiting for market open"
+
+    # Pending queue line (only shown when non-zero)
+    queue_line = (
+        f"\n📨 {pending} message(s) queued (will retry when online)"
+        if pending > 0 else ""
+    )
+
+    msg = (
+        f"💓 <b>Heartbeat #{_heartbeat_count}</b>\n\n"
+        f"⏰ {time_str}\n"
+        f"{market_line}\n"
+        f"{engine_line}{queue_line}\n\n"
+        f"⏱️ Uptime: ~{_heartbeat_count} hr(s)"
+    )
+
+    if _send_raw(msg):
+        print(f"[Heartbeat #{_heartbeat_count}] Sent at {now.strftime('%H:%M')}.")
+    else:
+        print(f"[Heartbeat #{_heartbeat_count}] Failed to send.")
+
+
 def send_startup_message():
     holiday      = get_holiday_name()
     is_holiday   = is_market_holiday()
@@ -328,6 +393,7 @@ def send_startup_message():
             "  🔷 FIN NIFTY    — Tue expiry\n"
             "  🔷 MIDCAP NIFTY — Mon expiry\n\n"
             "All signals logged to signals_log.csv\n"
+            "💓 Heartbeat ping every 1 hour\n"
             "⚠️ For testing and educational use only."
         )
     send_telegram(msg)
@@ -2453,6 +2519,9 @@ def run_scheduler():
     print("   Every 30m — Intraday stock scan (watchlist)")
     print("   04:00 PM  — Stock end-of-day summary")
     print("─"*55)
+    print("   HEARTBEAT")
+    print("   Every 1hr — Telegram ping: engine alive + market status")
+    print("─"*55)
     print("   INDEX F&O SCHEDULE")
     print("   09:00 AM  — Pre-market index scan")
     print("   Every 15m — Live index F&O scan")
@@ -2468,6 +2537,10 @@ def run_scheduler():
     print("="*55 + "\n")
 
     send_startup_message()
+
+    # ── Heartbeat — every 60 minutes ────────────────
+    # Sends a "engine alive" ping to Telegram every hour
+    schedule.every(60).minutes.do(send_heartbeat)
 
     # ── Stock schedule ──────────────────────────────
     schedule.every().day.at("09:00").do(morning_filter_scan)
