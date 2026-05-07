@@ -15,9 +15,8 @@ RUN pip install \
     requests \
     schedule \
     nsepython \
-    numpy
-
-RUN pip install git+https://github.com/twopirllc/pandas-ta.git
+    numpy \
+    pandas-ta-openbb
 
 COPY . .
 
