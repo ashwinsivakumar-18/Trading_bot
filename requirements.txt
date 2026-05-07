@@ -1,7 +1,5 @@
-yfinance==0.2.37
-pandas==2.1.4
-pandas-ta
+yfinance
+pandas
 requests
-schedule
-nsepython
 numpy
+schedule
