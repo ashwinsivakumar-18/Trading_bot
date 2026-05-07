@@ -16,6 +16,7 @@ RUN pip install \
     schedule \
     nsepython \
     numpy \
+    pytz\
     pandas-ta-openbb
 
 COPY . .

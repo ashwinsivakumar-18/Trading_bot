@@ -27,20 +27,21 @@ import csv
 import os
 import json
 from datetime import datetime, date
+import pytz
 from nsepython import nse_eq_symbols, fnolist
-
+india = pytz.timezone("Asia/Kolkata")
 # ─────────────────────────────────────────────
 #  YOUR CREDENTIALS — FILL THESE IN
 # ─────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = "8604631232:AAGspXA0tCSlfDMwTRhAK86iHpBeF2H4PnE"   # From BotFather
-TELEGRAM_CHAT_ID   = "1500073527"     # From @userinfobot
+TELEGRAM_CHAT_ID   = "2121122097"     # From @userinfobot
 
 # ─────────────────────────────────────────────
 #  SIGNAL SETTINGS — TUNE THESE LATER
 # ─────────────────────────────────────────────
-MIN_VOLUME           = 500000   # Swing: higher volume = liquid stocks only
-MIN_PRICE            = 50       # Swing: no penny stocks below ₹50
-MIN_PRICE_PREFERRED  = 100      # Preferred minimum for cleaner signals
+MIN_VOLUME           = 1500000   # Swing: higher volume = liquid stocks only
+MIN_PRICE            = 250       # Swing: no penny stocks below ₹50
+MIN_PRICE_PREFERRED  = 300      # Preferred minimum for cleaner signals
 RSI_OVERSOLD         = 45       # Swing: slightly higher threshold
 RSI_OVERBOUGHT       = 62       # Swing: slightly lower threshold
 CONFIDENCE_THRESHOLD = 65       # Swing: higher bar for quality signals
@@ -116,7 +117,7 @@ def get_next_trading_day() -> str:
     Skips weekends and all listed NSE/BSE holidays.
     Returns date string like 'Monday, 06 Apr 2026'
     """
-    check = datetime.now() + pd.Timedelta(days=1)
+    check = datetime.now(india) + pd.Timedelta(days=1)
     for _ in range(30):
         weekday   = check.weekday()
         check_str = check.strftime("%d-%m-%Y")
@@ -132,7 +133,7 @@ def is_market_holiday() -> bool:
     OR a Saturday or Sunday.
     Saturdays and Sundays are always blocked regardless of the holiday list.
     """
-    now       = datetime.now()
+    now       = datetime.now(india)
     weekday   = now.weekday()   # 0=Mon 1=Tue 2=Wed 3=Thu 4=Fri 5=Sat 6=Sun
 
     # Weekend — always blocked
@@ -152,7 +153,7 @@ def is_market_open() -> bool:
     """
     if is_market_holiday():
         return False
-    now   = datetime.now()
+    now   = datetime.now(india)
     h, m  = now.hour, now.minute
     after  = (h > 9) or (h == 9 and m >= 15)
     before = (h < 15) or (h == 15 and m <= 30)
@@ -165,7 +166,7 @@ def get_holiday_name() -> str:
     Returns 'Saturday' or 'Sunday' for weekends.
     Returns empty string if today is a normal trading day.
     """
-    now       = datetime.now()
+    now       = datetime.now(india)
     weekday   = now.weekday()
     today_str = now.strftime("%d-%m-%Y")
 
@@ -258,17 +259,17 @@ def check_internet_and_flush():
     if not current and _last_internet_status:
         # Just lost internet
         _last_internet_status = False
-        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] "
+        print(f"\n[{datetime.now(india).strftime('%H:%M:%S')}] "
               f"WARNING: Internet lost — signals will be queued.")
 
     elif current and not _last_internet_status:
         # Just regained internet
         _last_internet_status = True
-        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] "
+        print(f"\n[{datetime.now(india).strftime('%H:%M:%S')}] "
               f"Internet restored!")
         note = (
             f"✅ <b>Connection Restored</b>\n\n"
-            f"⏰ {datetime.now().strftime('%d %b %Y at %I:%M %p')}\n"
+            f"⏰ {datetime.now(india).strftime('%d %b %Y at %I:%M %p')}\n"
             f"Signal engine back online.\n"
         )
         if _pending_messages:
@@ -285,7 +286,7 @@ def send_startup_message():
     expiry_today = [] if is_holiday else [
         cfg["display"]
         for sym, cfg in INDEX_CONFIG.items()
-        if datetime.now().weekday() == cfg["expiry_weekday"]
+        if datetime.now(india).weekday() == cfg["expiry_weekday"]
     ]
     expiry_line = (
         f"\n🔔 <b>Expiry today:</b> {', '.join(expiry_today)}"
@@ -296,8 +297,8 @@ def send_startup_message():
         next_day = get_next_trading_day()
         msg = (
             "🚀 <b>Signal Engine Started</b>\n\n"
-            f"📅 {datetime.now().strftime('%d %b %Y')}  "
-            f"⏰ {datetime.now().strftime('%I:%M %p')}\n\n"
+            f"📅 {datetime.now(india).strftime('%d %b %Y')}  "
+            f"⏰ {datetime.now(india).strftime('%I:%M %p')}\n\n"
             f"🏖️ <b>Today is a market holiday — {holiday}</b>\n"
             "NSE and BSE are closed today.\n"
             "Engine is running but no signals will be sent.\n\n"
@@ -308,8 +309,8 @@ def send_startup_message():
     else:
         msg = (
             "🚀 <b>Signal Engine Started</b>\n\n"
-            f"📅 {datetime.now().strftime('%d %b %Y')}  "
-            f"⏰ {datetime.now().strftime('%I:%M %p')}"
+            f"📅 {datetime.now(india).strftime('%d %b %Y')}  "
+            f"⏰ {datetime.now(india).strftime('%I:%M %p')}"
             f"{expiry_line}\n\n"
             "<b>Stock signals</b>\n"
             "  09:00 AM  — Morning scan (all NSE+BSE)\n"
@@ -384,7 +385,7 @@ def load_open_positions() -> list:
             positions = json.load(f)
         # Sanitise — fill None date/time with safe defaults
         today_str = date.today().strftime("%d-%m-%Y")
-        now_str   = datetime.now().strftime("%H:%M")
+        now_str   = datetime.now(india).strftime("%H:%M")
         for pos in positions:
             if not pos.get("signal_date"):
                 pos["signal_date"] = today_str
@@ -432,7 +433,7 @@ def add_open_position(sig: dict):
         "stop_loss":    sig["stop_loss"],
         "confidence":   sig["confidence"],
         "signal_date":  sig.get("date") or date.today().strftime("%d-%m-%Y"),
-        "signal_time":  sig.get("time") or datetime.now().strftime("%H:%M"),
+        "signal_time":  sig.get("time") or datetime.now(india).strftime("%H:%M"),
         "reason":       sig.get("reason", ""),
         "category":     sig.get("signal_category", "STOCK"),
         # For index F&O positions
@@ -466,7 +467,7 @@ def format_target_hit_message(pos: dict, current_price: float) -> str:
         f"💰 Current price:  ₹{current_price}\n"
         f"📊 Gain:           +{gain}%\n\n"
         f"📅 Signal sent:    {sig_date} at {sig_time}\n"
-        f"⏰ Target hit:     {datetime.now().strftime('%d %b %Y at %I:%M %p')}\n\n"
+        f"⏰ Target hit:     {datetime.now(india).strftime('%d %b %Y at %I:%M %p')}\n\n"
         f"💡 <b>Action: Sell your position and book profit.</b>\n"
         f"⚠️ For educational purposes only."
     )
@@ -488,7 +489,7 @@ def format_stoploss_hit_message(pos: dict, current_price: float) -> str:
         f"💰 Current price:  ₹{current_price}\n"
         f"📊 Loss:           -{loss}%\n\n"
         f"📅 Signal sent:    {sig_date} at {sig_time}\n"
-        f"⏰ SL hit:         {datetime.now().strftime('%d %b %Y at %I:%M %p')}\n\n"
+        f"⏰ SL hit:         {datetime.now(india).strftime('%d %b %Y at %I:%M %p')}\n\n"
         f"💡 <b>Action: Exit immediately to protect capital.</b>\n"
         f"⚠️ Stop losses exist to protect your capital. Always respect them."
     )
@@ -514,7 +515,7 @@ def format_fo_target_hit_message(pos: dict, current_price: float) -> str:
         f"📈 Premium bought: ₹{premium}\n"
         f"🎯 Target premium: ₹{tgt_prem}  (+{gain_pct}%)\n"
         f"📅 Expiry:         {pos.get('fo_expiry', 'N/A')}\n\n"
-        f"⏰ Target hit: {datetime.now().strftime('%d %b %Y at %I:%M %p')}\n\n"
+        f"⏰ Target hit: {datetime.now(india).strftime('%d %b %Y at %I:%M %p')}\n\n"
         f"💡 <b>Action: Square off your options position.</b>\n"
         f"⚠️ For educational purposes only."
     )
@@ -1049,7 +1050,7 @@ def detect_stock_signal(symbol: str, df: pd.DataFrame) -> dict | None:
 
         return {
             "date":         date.today().strftime("%d-%m-%Y"),
-            "time":         datetime.now().strftime("%H:%M"),
+            "time":         datetime.now(india).strftime("%H:%M"),
             "stock":        symbol.replace(".NS", "").replace(".BO", ""),
             "exchange":     "NSE" if ".NS" in symbol else "BSE",
             "signal_type":  signal_type,
@@ -1112,7 +1113,7 @@ def detect_fo_signal(symbol: str, df: pd.DataFrame) -> dict | None:
         sl_premium  = round(premium * 0.5, 1)
 
         # Next weekly expiry (Thursday)
-        today       = datetime.now()
+        today       = datetime.now(india)
         days_to_thu = (3 - today.weekday()) % 7
         if days_to_thu == 0:
             days_to_thu = 7
@@ -1212,7 +1213,7 @@ def morning_filter_scan():
         send_telegram(msg)
         return
     print("\n" + "="*50)
-    print(f"[{datetime.now().strftime('%H:%M')}] MORNING SCAN STARTED")
+    print(f"[{datetime.now(india).strftime('%H:%M')}] MORNING SCAN STARTED")
     print("="*50)
 
     # Clear today's signal tracker — fresh start each trading day
@@ -1222,7 +1223,7 @@ def morning_filter_scan():
 
     send_telegram(
         f"🌅 <b>Morning Scan Started</b>\n"
-        f"⏰ {datetime.now().strftime('%I:%M %p')}\n"
+        f"⏰ {datetime.now(india).strftime('%I:%M %p')}\n"
         f"Scanning all NSE + BSE stocks...\nThis takes 10–15 minutes."
     )
 
@@ -1314,7 +1315,7 @@ def intraday_signal_scan():
     Blocked on weekends and NSE/BSE holidays.
     Scans only watchlist stocks for live signals.
     """
-    now = datetime.now()
+    now = datetime.now(india)
     hour, minute = now.hour, now.minute
 
     # ── Holiday gate ──
@@ -1507,7 +1508,7 @@ def get_next_expiry(expiry_weekday: int) -> str:
     expiry_weekday: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri
     Returns date string like '03 Apr'
     """
-    today     = datetime.now()
+    today     = datetime.now(india)
     days_ahead = expiry_weekday - today.weekday()
     if days_ahead <= 0:
         days_ahead += 7
@@ -1520,7 +1521,7 @@ def get_next_monthly_expiry(expiry_weekday: int) -> str:
     Get last Thursday (or given weekday) of current/next month.
     Used for monthly expiry signals.
     """
-    today = datetime.now()
+    today = datetime.now(india)
     # Find last occurrence of weekday in current month
     import calendar
     year, month = today.year, today.month
@@ -1956,7 +1957,7 @@ def detect_index_fo_signal(symbol: str, config: dict) -> dict | None:
         weekly_expiry  = get_next_expiry(expiry_weekday)
         monthly_expiry = get_next_monthly_expiry(expiry_weekday)
 
-        today          = datetime.now()
+        today          = datetime.now(india)
         days_ahead     = expiry_weekday - today.weekday()
         if days_ahead <= 0:
             days_ahead += 7
@@ -2021,7 +2022,7 @@ def detect_index_fo_signal(symbol: str, config: dict) -> dict | None:
 
         return {
             "date":             date.today().strftime("%d-%m-%Y"),
-            "time":             datetime.now().strftime("%H:%M"),
+            "time":             datetime.now(india).strftime("%H:%M"),
             "stock":            config["name"],
             "display_name":     config["display"],
             "exchange":         "NSE" if "BSESN" not in symbol else "BSE",
@@ -2144,7 +2145,7 @@ def is_expiry_day(index_symbol: str) -> bool:
     config = INDEX_CONFIG.get(index_symbol)
     if not config:
         return False
-    return datetime.now().weekday() == config["expiry_weekday"]
+    return datetime.now(india).weekday() == config["expiry_weekday"]
 
 
 def is_expiry_crunch_time() -> bool:
@@ -2152,7 +2153,7 @@ def is_expiry_crunch_time() -> bool:
     Return True if it is 1:00 PM – 3:15 PM AND today is any index expiry day.
     During this window options decay rapidly — scan every 5 minutes.
     """
-    now    = datetime.now()
+    now    = datetime.now(india)
     h, m   = now.hour, now.minute
     in_window = (h == 13) or (h == 14) or (h == 15 and m <= 15)
     if not in_window:
@@ -2177,7 +2178,7 @@ def premarket_index_scan():
         print(f"[Pre-market] Holiday ({holiday}) — skipping index scan.")
         return
 
-    print(f"\n[{datetime.now().strftime('%H:%M')}] PRE-MARKET INDEX SCAN")
+    print(f"\n[{datetime.now(india).strftime('%H:%M')}] PRE-MARKET INDEX SCAN")
 
     expiry_alerts = []
     for symbol, config in INDEX_CONFIG.items():
@@ -2194,7 +2195,7 @@ def premarket_index_scan():
 
     header = (
         f"🌅 <b>Pre-Market Index Report — "
-        f"{datetime.now().strftime('%d %b %Y')}</b>\n"
+        f"{datetime.now(india).strftime('%d %b %Y')}</b>\n"
         f"{expiry_note}\n"
         f"Scanning all 5 indices for opening signals...\n"
         f"Market opens at 9:15 AM"
@@ -2241,7 +2242,7 @@ def live_index_fo_scan():
     if not is_market_open():
         return
 
-    now         = datetime.now()
+    now         = datetime.now(india)
     is_expiry   = is_expiry_crunch_time()
     mode_label  = "EXPIRY 5-MIN" if is_expiry else "15-MIN"
 
@@ -2312,7 +2313,7 @@ def index_eod_summary():
     Sends a dedicated index F&O end-of-day summary at 3:35 PM.
     Shows how each index closed and all signals from today.
     """
-    print(f"\n[{datetime.now().strftime('%H:%M')}] INDEX EOD SUMMARY")
+    print(f"\n[{datetime.now(india).strftime('%H:%M')}] INDEX EOD SUMMARY")
 
     lines = [f"📊 <b>Index F&O — End of Day</b>\n"
              f"📅 {date.today().strftime('%d %b %Y')}\n"]
@@ -2366,7 +2367,7 @@ def index_eod_summary():
 
 def end_of_day_summary():
     """Sends a daily summary at 4:00 PM."""
-    print(f"\n[{datetime.now().strftime('%H:%M')}] Generating end of day summary...")
+    print(f"\n[{datetime.now(india).strftime('%H:%M')}] Generating end of day summary...")
 
     if not os.path.isfile(LOG_FILE):
         send_telegram("📊 No signals logged today.")
@@ -2439,7 +2440,7 @@ def run_scheduler():
     FIN NIFTY     — weekly expiry every Tuesday
     MIDCAP NIFTY  — weekly expiry every Monday
     """
-    now_dt = datetime.now()
+    now_dt = datetime.now(india)
 
     print("\n" + "="*55)
     print("   STOCK + INDEX F&O SIGNAL ENGINE")
@@ -2491,7 +2492,7 @@ def run_scheduler():
     schedule.every().day.at("15:35").do(index_eod_summary)
 
     # ── Immediate startup logic ─────────────────────
-    now = datetime.now()
+    now = datetime.now(india)
     h   = now.hour
 
     if is_market_holiday():
