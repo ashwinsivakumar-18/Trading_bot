@@ -3,5 +3,5 @@ pandas
 requests
 numpy
 schedule
-pandas-ta
 nsepython
+git+https://github.com/twopirllc/pandas-ta.git
