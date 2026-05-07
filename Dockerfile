@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
-    pip install yfinance pandas-ta pandas requests schedule nsepython && \
+    pip install yfinance pandas-ta pandas requests schedule nsepython
 
 COPY . .
 
