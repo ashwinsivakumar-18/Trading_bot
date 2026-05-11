@@ -34,7 +34,7 @@ india = pytz.timezone("Asia/Kolkata")
 #  YOUR CREDENTIALS — FILL THESE IN
 # ─────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN = "8604631232:AAGspXA0tCSlfDMwTRhAK86iHpBeF2H4PnE"   # From BotFather
-TELEGRAM_CHAT_ID   = "2121122097"     # From @userinfobot
+TELEGRAM_CHAT_ID   = "1500073527"     # From @userinfobot
 
 # ─────────────────────────────────────────────
 #  SIGNAL SETTINGS — TUNE THESE LATER
